@@ -230,6 +230,7 @@ org-files and bookmarks"
                    ("Search" . (lambda () (call-interactively #'engine/search-google)))
                    ("Random Todo" . org-random-entry)
                    ("Github" . (lambda() (helm-github-stars)))
+                   ("Prodigy" . (lambda() (prodigy)))
                    ("Calculator" . (lambda () (helm-calcul-expression)))
                    ("Run current flie" . (lambda () (zilongshanren/run-current-file)))
                    ("Agenda" . (lambda () (org-agenda "" "a")))
@@ -278,22 +279,27 @@ e.g. Sunday, September 17, 2000."
       (progn (add-hook 'org-pomodoro-finished-hook '(lambda () (sound-wav-play (expand-file-name "~/.spacemacs.d/game_win.wav"))))
              (add-hook 'org-pomodoro-short-break-finished-hook '(lambda () (sound-wav-play (expand-file-name "~/.spacemacs.d/game_win.wav"))))
              (add-hook 'org-pomodoro-long-break-finished-hook '(lambda () (sound-wav-play (expand-file-name "~/.spacemacs.d/game_win.wav")))))
-    (progn (add-hook 'org-pomodoro-finished-hook '(lambda () (zilongshanren/growl-notification "Pomodoro Finished" "☕️ Have a break!" t)))
-           (add-hook 'org-pomodoro-short-break-finished-hook '(lambda () (zilongshanren/growl-notification "Short Break" "🐝 Ready to Go?" t)))
-             (add-hook 'org-pomodoro-long-break-finished-hook '(lambda () (zilongshanren/growl-notification "Long Break" " 💪 Ready to Go?" t))))))
+    (progn (add-hook 'org-pomodoro-finished-hook '(lambda () (zilongshanren/growl-notification "Pomodoro Finished" "Have a break!" t)))
+           (add-hook 'org-pomodoro-short-break-finished-hook '(lambda () (zilongshanren/growl-notification "Short Break" "Ready to Go?" t)))
+             (add-hook 'org-pomodoro-long-break-finished-hook '(lambda () (zilongshanren/growl-notification "Long Break" " Ready to Go?" t))))))
 
 ;; http://blog.lojic.com/2009/08/06/send-growl-notifications-from-carbon-emacs-on-osx/
 ;; should register Emacs.app to the Growl app at the first, otherwise it won't be display
+;; (defun zilongshanren/growl-notification (title message &optional sticky)
+;;   "Send a Growl notification"
+;;   (do-applescript
+;;    (format "tell application \"GrowlHelperApp\" \n
+;;               notify with name \"Emacs Notification\" title \"%s\" description \"%s\" application name \"Emacs.app\" sticky \"%s\"
+;;               end tell
+;;               "
+;;            title
+;;            message
+;;            (if sticky "yes" "no"))))
+
+
 (defun zilongshanren/growl-notification (title message &optional sticky)
-  "Send a Growl notification"
-  (do-applescript
-   (format "tell application \"GrowlHelperApp\" \n
-              notify with name \"Emacs Notification\" title \"%s\" description \"%s\" application name \"Emacs.app\" sticky \"%s\"
-              end tell
-              "
-           title
-           message
-           (if sticky "yes" "no"))))
+  "Send a  alert notification"
+  (alert message :title title :severity 'high))
 
 (defun zilongshanren/growl-timer (minutes message)
   "Issue a Growl notification after specified minutes"
@@ -630,15 +636,13 @@ With PREFIX, cd to project root."
       (message "No remote branch"))
      (t
       (browse-url
-       (if (or 1 (spacemacs/system-is-mswindows))
-           "https://git.code.oa.com/lionqu/HLMJ_js/merge_requests/new"
-         (format "https://github.com/%s/pull/new/%s"
-                 (replace-regexp-in-string
-                  "\\`.+github\\.com:\\(.+\\)\\.git\\'" "\\1"
-                  (magit-get "remote"
-                             (magit-get-remote)
-                             "url"))
-                 remote-branch)))))))
+       (format "https://github.com/%s/pull/new/%s"
+               (replace-regexp-in-string
+                "\\`.+github\\.com:\\(.+\\)\\.git\\'" "\\1"
+                (magit-get "remote"
+                           (magit-get-remote)
+                           "url"))
+               remote-branch))))))
 
 (defun zilongshanren/markdown-to-html ()
   (interactive)

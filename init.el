@@ -32,15 +32,17 @@ This function should only modify configuration layer settings."
    dotspacemacs-configuration-layers
    '(
      (ivy :variables ivy-enable-advanced-buffer-information nil)
-     (better-defaults :variables better-defaults-move-to-beginning-of-code-first t)
+     better-defaults
      ranger
      emoji
      (plantuml :variables plantuml-jar-path "~/.spacemacs.d/plantuml.jar")
-     ;; lsp
-     ;; dap
+     (lsp :variables lsp-rust-server 'rust-analyzer)
+     dap
      colors
      prodigy
-     ;; github
+     epub
+     (rust :variables rust-backend 'racer)
+     github
      search-engine
      graphviz
      (haskell :variables haskell-enable-hindent t
@@ -128,7 +130,7 @@ This function should only modify configuration layer settings."
                     helm-flyspell flyspell-correct-helm clean-aindent-mode
                     helm-c-yasnippet ace-jump-helm-line helm-make magithub
                     helm-themes helm-swoop helm-spacemacs-help smeargle
-                    ido-vertical-mode flx-ido company-quickhelp ivy-rich helm-purpose
+                    ido-vertical-mode flx-ido company-quickhelp ivy-rich helm-purpose pyim
                     )
    dotspacemacs-install-packages 'used-only
    dotspacemacs-delete-orphan-packages t))
@@ -239,8 +241,8 @@ It should only modify the values of Spacemacs settings."
    ;; List of themes, the first of the list is loaded when spacemacs starts.
    ;; Press `SPC T n' to cycle to the next theme in the list (works great
    ;; with 2 themes variants, one dark and one light)
-   dotspacemacs-themes '(solarized-light
-                         solarized-dark)
+   dotspacemacs-themes '(modus-operandi
+                         modus-vivendi)
    ;; Set the theme for the Spaceline. Supported themes are `spacemacs',
    ;; `all-the-icons', `custom', `doom', `vim-powerline' and `vanilla'. The
    ;; first three are spaceline themes. `doom' is the doom-emacs mode-line.
@@ -493,6 +495,7 @@ dump."
 
 (defun dotspacemacs/user-init ()
 
+  (setq load-path (cons (file-truename "~/.spacemacs.d/") load-path))
   (setq-default configuration-layer-elpa-archives
                 '(("melpa-cn" . "http://elpa.emacs-china.org/melpa/")
                   ("org-cn"   . "http://elpa.emacs-china.org/org/")
@@ -519,7 +522,13 @@ dump."
   )
 
 (defun dotspacemacs/user-config ()
-   
+  ;; 重新编译一个新包，从 org elpa 上面下载对应的org-plus-congrib 版本
+  ;; SPC u 0 byte-recompile-directory 来编译这个目录
+  ;; 下面这个函数的第一个参数是包名，一定不能出错！
+  ;; (package-generate-autoloads "org-plus-contrib" "~/.emacs.d/elpa/27.1/develop/org-plus-contrib-20190902/")
+  
+  (setq rust-format-on-save t)
+  
   ;;解决org表格里面中英文对齐的问题 
   (when (configuration-layer/layer-usedp 'chinese)
     (when (and (spacemacs/system-is-mac) window-system)
@@ -529,9 +538,11 @@ dump."
   (server-start)
   (require 'org-protocol)
 
+  (setq ispell-program-name "aspell")
+  (setq ispell-dictionary "english")
+
   ;; Setting Chinese Font
   (when (and (spacemacs/system-is-mswindows) window-system)
-    (setq ispell-program-name "aspell")
     (setq w32-pass-alt-to-system nil)
     (setq w32-apps-modifier 'super)
     (dolist (charset '(kana han symbol cjk-misc bopomofo))
@@ -552,7 +563,7 @@ dump."
   ;; temp fix for ivy-switch-buffer
   ;; (spacemacs/set-leader-keys "bb" 'helm-mini)
 
-  (global-hungry-delete-mode t)
+  ;; (global-hungry-delete-mode t)
   (spacemacs|diminish helm-gtags-mode)
   (spacemacs|diminish ggtags-mode)
   (spacemacs|diminish which-key-mode)
@@ -588,18 +599,18 @@ dump."
         (when (looking-at (concat "^" (make-string tab-width ?\ )))
           (replace-match "")))))
 
-  (defun sapling/toggle-major-mode ()
+  (defun zilongshanren/toggle-major-mode ()
     (interactive)
     (if (eq major-mode 'fundamental-mode)
         (set-auto-mode)
       (fundamental-mode)))
-  (spacemacs/set-leader-keys "otm" 'sapling/toggle-major-mode)
+  (spacemacs/set-leader-keys "otm" 'zilongshanren/toggle-major-mode)
 
   (setq inhibit-compacting-font-caches t)
   (global-display-line-numbers-mode -1)
 
   (defun moon-override-yank-pop (&optional arg)
-    "Delete the region before inserting poped string." 
+    "Delete the region before inserting poped string."
     (when (and evil-mode (eq 'visual evil-state))
       (kill-region (region-beginning) (region-end))))
 
@@ -639,20 +650,24 @@ dump."
                (setq ispell-program-name "aspell")
                (setq ispell-personal-dictionary "c:/msys64/mingw64/lib/aspell-0.60/en_GB")
 
-               )) 
+               ))
 
            (add-hook 'projectile-mode-hook '(lambda () (remove-hook 'find-file-hook #'projectile-find-file-hook-function)))))
 
   (setq exec-path (cons "/Users/lionqu/.nvm/versions/node/v10.16.0/bin/" exec-path))
   (setenv "PATH" (concat "/Users/lionqu/.nvm/versions/node/v10.16.0/bin:" (getenv "PATH")))
 
-  (defun counsel-locate-cmd-es (input)
-    "Return a shell command based on INPUT."
-    (counsel-require-program "es.exe")
-    (encode-coding-string (format "es.exe -i -r -p %s"
-                                  (counsel-unquote-regex-parens
-                                   (ivy--regex input t)))
-                          'gbk))
+  ;;Report time every half hour
+  ;; (defun announce-time ()
+  ;;   (message-box (format "It's %s" (format-time-string "%I:%M %p" (current-time)))))
+
+  ;; (let ((next-hour
+  ;;        (number-to-string
+  ;;         (+ (string-to-number
+  ;;             (format-time-string "%H" (current-time)))
+  ;;            1))))
+  ;;   (run-at-time (concat next-hour ":00") 1800 #'announce-time))
+
   ;; (add-hook 'text-mode-hook 'spacemacs/toggle-spelling-checking-on)
 
   (add-hook 'org-mode-hook 'emojify-mode)
@@ -686,4 +701,3 @@ This is an auto-generated function, do not modify its content directly, use
 Emacs customize menu instead.
 This function is called at the very end of Spacemacs initialization."
 )
-

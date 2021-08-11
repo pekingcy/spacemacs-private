@@ -51,7 +51,16 @@
         ;; pyim
         lispyville
         popup
+        rime
+        alert
         ))
+
+(defun zilongshanren-misc/init-alert ()
+  (use-package alert
+    :config
+    (setq alert-default-style 'osx-notifier)
+    ;; (setq alert-default-style 'growl)
+    ))
 
 (defun zilongshanren-misc/post-init-popup ()
   (use-package popup
@@ -968,6 +977,39 @@ Search for a search tool in the order provided by `dotspacemacs-search-tools'."
       :body
       (find-file "~/zilongshanren.com/config.toml")))
   )
+
+(defun zilongshanren-misc/init-rime ()
+  (use-package rime
+    :custom
+    (rime-librime-root "~/.emacs.d/librime/dist")
+    :init
+    (progn
+      ;; 在代码的字符中不临时禁用输入法
+      (defun +rime-predicate-in-code-string ()
+        (eq (plist-get (text-properties-at (point)) 'face) 'font-lock-string-face))
+
+
+      (setq default-input-method "rime"
+            rime-show-candidate 'posframe)
+
+      ;; 在某些场景下不激活输入法
+      (setq rime-disable-predicates
+            '(rime-predicate-evil-mode-p
+              rime-predicate-after-alphabet-char-p
+              rime-predicate-punctuation-line-begin-p
+              rime-predicate-punctuation-after-space-cc-p
+              rime-predicate-punctuation-after-ascii-p
+              rime-predicate-space-after-cc-p
+              rime-predicate-prog-in-code-p
+              +rime-predicate-in-code-string))
+
+      (setq rime-user-data-dir "~/Library/Rime/")
+      )
+    :config
+    (progn
+      (define-key rime-mode-map (kbd "s-j") 'rime-force-enable)
+
+      )))
 
 (defun zilongshanren-misc/post-init-pyim ()
   (progn

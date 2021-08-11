@@ -22,12 +22,43 @@
     ob-typescript
     evil-org
     org-superstar
+    org-super-agenda
+    cal-china-x
     ;; org-tree-slide
     ;; ox-reveal
     ;; worf
     ;; org-download
     ;; plain-org-wiki
     )
+  )
+
+(defun zilongshanren-org/init-cal-china-x ()
+  (use-package cal-china-x
+    :config
+    (progn
+      (setq mark-holidays-in-calendar t)
+      (setq cal-china-x-important-holidays cal-china-x-chinese-holidays)
+      (setq cal-china-x-general-holidays '((holiday-lunar 1 15 "元宵节")))
+      (setq calendar-holidays
+            (append cal-china-x-important-holidays
+                    cal-china-x-general-holidays
+                    ))
+      )))
+
+(defun zilongshanren-org/init-org-super-agenda ()
+  (use-package org-super-agenda
+    :init
+    (setq org-super-agenda-groups
+          '((:name "Important"
+                   :priority "A")
+            (:name "Quick Picks"
+                   :effort< "0:30")
+            (:name "Next Items"
+                   :tag ("NEXT" "outbox"))
+            (:priority<= "B"
+                         :scheduled future)))
+  
+    (add-hook 'org-mode-hook 'org-super-agenda-mode))
   )
 
 (defun zilongshanren-org/post-init-org-superstar ()
@@ -57,7 +88,6 @@
   (add-hook 'org-mode-hook (lambda () (spacemacs/toggle-line-numbers-off)) 'append)
   (with-eval-after-load 'org
     (progn
-
       ;; disable < auto pair for org mode
       ;; disable {} auto pairing in electric-pair-mode for web-mode
       (add-hook
@@ -75,6 +105,19 @@
       ;; settings from above.
       (org-set-emph-re 'org-emphasis-regexp-components org-emphasis-regexp-components)
 
+      (setq org-agenda-log-mode-items '(clock closed state))
+
+      ;; 当操作org agenda的buffer的时候自动保存，也可以直接在agenda buffer按save
+      ;; 会有bug, 导致org 报错
+      ;; (advice-add 'org-agenda-clock-in :after 'org-save-all-org-buffers)
+      ;; (advice-add 'org-agenda-clock-out :after 'org-save-all-org-buffers)
+      ;; (advice-add 'org-agenda-todo :after 'org-save-all-org-buffers)
+      ;; (advice-add 'org-agenda-schedule :after 'org-save-all-org-buffers)
+      ;; (advice-add 'org-store-log-note :after 'org-save-all-org-buffers)
+      ;; (advice-add 'org-pomodoro :after 'org-save-all-org-buffers)
+      ;; (advice-add 'org-agenda-deadline :after 'org-save-all-org-buffers)
+      ;; (advice-add 'org-agenda-priority :after 'org-save-all-org-buffers)
+     
       ;; (defun th/org-outline-context-p ()
       ;;   (re-search-backward org-outline-regexp))
       ;; ;; Some usages
@@ -89,6 +132,95 @@
 	  ;;                                   (equal last-command-event (elt (this-command-keys-vector) 0))
 	  ;;                                   (TeX-current-macro))
 	  ;;                          #'th/TeX-goto-macro-end)))
+      
+      (defun zilong/org-return (&optional indent)
+        "Goto next table row or insert a newline.
+
+Calls `org-table-next-row' or `newline', depending on context.
+
+When optional INDENT argument is non-nil, call
+`newline-and-indent' instead of `newline'.
+
+When `org-return-follows-link' is non-nil and point is on
+a timestamp or a link, call `org-open-at-point'.  However, it
+will not happen if point is in a table or on a \"dead\"
+object (e.g., within a comment).  In these case, you need to use
+`org-open-at-point' directly."
+        (interactive)
+        (let ((context (if org-return-follows-link (org-element-context)
+                         (org-element-at-point))))
+          (cond
+           ;; In a table, call `org-table-next-row'.  However, before first
+           ;; column or after last one, split the table.
+           ((or (and (eq 'table (org-element-type context))
+                     (not (eq 'table.el (org-element-property :type context)))
+                     (>= (point) (org-element-property :contents-begin context))
+                     (< (point) (org-element-property :contents-end context)))
+                (org-element-lineage context '(table-row table-cell) t))
+            (if (or (looking-at-p "[ \t]*$")
+                    (save-excursion (skip-chars-backward " \t") (bolp)))
+                (insert "\n")
+              (org-table-justify-field-maybe)
+              (call-interactively #'org-table-next-row)))
+           ;; On a link or a timestamp, call `org-open-at-point' if
+           ;; `org-return-follows-link' allows it.  Tolerate fuzzy
+           ;; locations, e.g., in a comment, as `org-open-at-point'.
+           ((and org-return-follows-link
+                 (or (and (eq 'link (org-element-type context))
+                          ;; Ensure point is not on the white spaces after
+                          ;; the link.
+                          (let ((origin (point)))
+                            (org-with-point-at (org-element-property :end context)
+                              (skip-chars-backward " \t")
+                              (> (point) origin))))
+                     (org-in-regexp org-ts-regexp-both nil t)
+                     (org-in-regexp org-tsr-regexp-both nil t)
+                     (org-in-regexp org-any-link-re nil t)))
+            (call-interactively #'org-open-at-point))
+           ;; Insert newline in heading, but preserve tags.
+           ((and (not (bolp))
+                 (let ((case-fold-search nil))
+                   (org-match-line org-complex-heading-regexp)))
+            ;; At headline.  Split line.  However, if point is on keyword,
+            ;; priority cookie or tags, do not break any of them: add
+            ;; a newline after the headline instead.
+            (let ((tags-column (and (match-beginning 5)
+                                    (save-excursion (goto-char (match-beginning 5))
+                                                    (current-column))))
+                  (string
+                   (when (and (match-end 4) (org-point-in-group (point) 4))
+                     (delete-and-extract-region (point) (match-end 4)))))
+              ;; Adjust tag alignment.
+              (cond
+               ((not (and tags-column string)))
+               (org-auto-align-tags (org-align-tags))
+               (t (org--align-tags-here tags-column))) ;preserve tags column
+              (end-of-line)
+              (org-show-entry)
+              (if indent (newline-and-indent) (newline))
+              (when string (save-excursion (insert (org-trim string))))))
+           ;; In a list, make sure indenting keeps trailing text within.
+           ((and indent
+                 (not (eolp))
+                 (org-element-lineage context '(item)))
+            (let ((trailing-data
+                   (delete-and-extract-region (point) (line-end-position))))
+              (newline-and-indent)
+              (save-excursion (insert trailing-data))))
+           ((and (eolp) (org-at-item-p))
+            (end-of-visible-line)
+            (org-insert-item (org-at-item-checkbox-p)))
+           (t
+            ;; Do not auto-fill when point is in an Org property drawer.
+            (let ((auto-fill-function (and (not (org-at-property-p))
+                                           auto-fill-function)))
+              (if indent
+                  (newline-and-indent)
+                (newline)))))))
+
+
+(define-key org-mode-map (kbd "RET")
+  'zilong/org-return)
       
       (spacemacs|disable-company org-mode)
       (spacemacs/set-leader-keys-for-major-mode 'org-mode
@@ -108,6 +240,9 @@
       ;; (add-to-list 'org-modules "org-habit")
       (add-to-list 'org-modules 'org-habit)
       (require 'org-habit)
+
+      ;; 调整orghabit 的显示长度
+      (setq org-habit-graph-column 60)
 
       (setq org-refile-use-outline-path 'file)
       (setq org-outline-path-complete-in-steps nil)
@@ -143,7 +278,21 @@
       ;; 可以設定任何 ID 或是設成 nil 來使用對稱式加密 (symmetric encryption)
       (setq org-crypt-key nil)
 
-      ;; (add-to-list 'auto-mode-alist '("\.org\\'" . org-mode))
+      (require 'cal-china)
+      ;; diary for chinese birthday
+      ;; https://emacs-china.org/t/topic/2119/14
+      (defun my--diary-chinese-anniversary (lunar-month lunar-day &optional year mark)
+        (if year
+            (let* ((d-date (diary-make-date lunar-month lunar-day year))
+                   (a-date (calendar-absolute-from-gregorian d-date))
+                   (c-date (calendar-chinese-from-absolute a-date))
+                   (date a-date)
+                   (cycle (car c-date))
+                   (yy (cadr c-date))
+                   (y (+ (* 100 cycle) yy)))
+              (diary-chinese-anniversary lunar-month lunar-day y mark))
+          (diary-chinese-anniversary lunar-month lunar-day year mark)))
+
 
       (setq org-todo-keywords
             (quote ((sequence "TODO(t)" "STARTED(s)" "|" "DONE(d!/!)")
@@ -316,6 +465,7 @@
       ;; define the refile targets
       (setq org-agenda-file-note (expand-file-name "notes.org" org-agenda-dir))
       (setq org-agenda-file-gtd (expand-file-name "gtd.org" org-agenda-dir))
+      (setq org-agenda-file-work (expand-file-name "work.org" org-agenda-dir))
       (setq org-agenda-file-journal (expand-file-name "journal.org" org-agenda-dir))
       (setq org-agenda-file-code-snippet (expand-file-name "snippet.org" org-agenda-dir))
       (setq org-default-notes-file (expand-file-name "gtd.org" org-agenda-dir))
@@ -329,6 +479,10 @@
         (define-key org-agenda-mode-map (kbd "P") 'org-pomodoro)
         (spacemacs/set-leader-keys-for-major-mode 'org-agenda-mode
           "." 'spacemacs/org-agenda-transient-state/body)
+        (spacemacs/set-leader-keys-for-major-mode 'org-agenda-mode
+          "p" 'org-agenda-priority)
+        ;; 默认显示节假日
+        (setq org-agenda-include-diary t)
         )
       ;; the %i would copy the selected text into the template
       ;;http://www.howardism.org/Technical/Emacs/journaling-org.html
@@ -346,7 +500,7 @@
               ("s" "Code Snippet" entry
                (file org-agenda-file-code-snippet)
                "* %?\t%^g\n#+BEGIN_SRC %^{language}\n\n#+END_SRC")
-              ("w" "work" entry (file+headline org-agenda-file-gtd "Work")
+              ("w" "work" entry (file+headline org-agenda-file-work "Work")
                "* TODO [#A] %?\n  %i\n %U"
                :empty-lines 1)
               ("x" "Web Collections" entry
@@ -408,6 +562,16 @@ See `org-capture-templates' for more information."
                ((stuck "") ;; review stuck projects as designated by org-stuck-projects
                 (tags-todo "PROJECT") ;; review all projects (assuming you use todo keywords to designate projects)
                 ))))
+
+      (add-to-list 'org-agenda-custom-commands
+                   '("r" "Daily Agenda Review"
+                     ((agenda "" ((org-agenda-overriding-header "今日记录")
+                                  (org-agenda-span 'day)
+                                  (org-agenda-show-log 'clockcheck)
+                                  (org-agenda-start-with-log-mode nil)
+                                  (org-agenda-log-mode-items '(closed clock state))
+                                  (org-agenda-clockreport-mode t))))))
+
 
       (defvar zilongshanren-website-html-preamble
         "<div class='nav'>

@@ -77,7 +77,7 @@
   (setq-default mode-line-format
                 (list
                  " %1"
-                 '(:eval (zilongshanren/modeline-winum-mode))
+                 '(:eval (window-number-mode-line))
                  " "
                  '(:eval (zilong/modeline--evil-substitute))
                  '(:eval (zilongshanren/update-persp-name))
@@ -138,6 +138,8 @@
                            `(vc-mode vc-mode)))
 
                  " "
+
+                 '(:eval (rime-lighter))
 
                  ;; global-mode-string goes in mode-line-misc-info
                  '(:eval (when (> (window-width) 120)
@@ -240,7 +242,6 @@ This segment overrides the modeline functionality of `org-mode-line-string'."
       (setq company-box-show-single-candidate t)
       (setq company-box-max-candidates 50))))
 
-  (global-linum-mode 1)
 
 (defun zilongshanren-ui/init-beacon ()
   (use-package beacon

@@ -71,7 +71,11 @@
          ((and (functionp 'lsp-ui-mode) (featurep 'flycheck))
           (require 'lsp-ui-flycheck)
           (lsp-ui-flycheck-enable t)
-          (flycheck-mode -1)))
+          ;; (flycheck-mode -1)
+          ))
+
+        (with-eval-after-load 'rust-mode
+          (add-hook 'flycheck-mode-hook #'flycheck-rust-setup))
 
         (when (functionp 'company-lsp)
           (company-mode 1)
@@ -307,7 +311,9 @@
 
       (spacemacs|hide-lighter lispy-mode)
       (define-key lispy-mode-map (kbd "M-s") 'lispy-splice)
+      (define-key lispy-mode-map (kbd "DEL") 'lispy-delete-backward)
       (define-key lispy-mode-map (kbd "s-k") 'paredit-splice-sexp-killing-backward)
+
 
       (with-eval-after-load 'cider-repl
         (define-key cider-repl-mode-map (kbd "C-s-j") 'cider-repl-newline-and-indent))
