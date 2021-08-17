@@ -982,6 +982,7 @@ Search for a search tool in the order provided by `dotspacemacs-search-tools'."
   (use-package rime
     :custom
     (rime-librime-root "~/.emacs.d/librime/dist")
+    (setq rime-emacs-module-header-root "/Applications/Emacs.app/Contents/Resources/include")
     :init
     (progn
       ;; 在代码的字符中不临时禁用输入法
