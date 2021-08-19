@@ -93,7 +93,7 @@ This function should only modify configuration layer settings."
      (typescript :variables
                  typescript-fmt-on-save nil
                  typescript-fmt-tool 'typescript-formatter
-                typescript-backend 'lsp)
+                 typescript-backend 'lsp)
      emacs-lisp
      (clojure :variables clojure-enable-fancify-symbols t)
      racket
@@ -499,6 +499,7 @@ dump."
   (setq-default configuration-layer-elpa-archives
                 '(("melpa-cn" . "http://elpa.emacs-china.org/melpa/")
                   ("org-cn"   . "http://elpa.emacs-china.org/org/")
+                  ("nongnu"   . "https://elpa.nongnu.org/nongnu/")
                   ("gnu-cn"   . "http://elpa.emacs-china.org/gnu/")))
 
   
