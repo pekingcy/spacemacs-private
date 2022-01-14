@@ -527,7 +527,9 @@ dump."
   ;; SPC u 0 byte-recompile-directory 来编译这个目录
   ;; 下面这个函数的第一个参数是包名，一定不能出错！
   ;; (package-generate-autoloads "org-plus-contrib" "~/.emacs.d/elpa/27.1/develop/org-plus-contrib-20190902/")
-  
+  ;;加载主题
+  (load-theme 'spacemacs-dark)
+
   (setq rust-format-on-save t)
   
   ;;解决org表格里面中英文对齐的问题 
